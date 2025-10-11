@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6954843314374636"
+     crossorigin="anonymous"></script>
+    <meta charset="UTF-8">
+    <meta name="google-adsense-account" content="ca-pub-6954843314374636">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Countdown Timer</title>
+    <style>
+        /* --- STYLES (Blue & White Theme) --- */
+        :root {
+            --primary-blue: #007bff;
+            --dark-blue: #0056b3;
+            --light-blue: #e6f2ff;
+            --text-dark: #343a40;
+            --text-medium: #6c757d;
+            --background-light: #f8f9fa;
+            --white: #ffffff;
+            --border-light: #dee2e6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: var(--background-light);
+            text-align: center;
+        }
+
+        .container {
+            background-color: var(--white);
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            max-width: 90%;
+            width: 400px;
+        }
+
+        h1 {
+            color: var(--text-dark);
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+
+        #display {
+            font-size: 4em;
+            margin: 20px 0;
+            color: var(--primary-blue);
+            font-weight: 700;
+            letter-spacing: 2px;
+            padding: 10px 0;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px; 
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .input-group label {
+            font-size: 0.9em;
+            color: var(--text-medium);
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .controls input {
+            width: 50px;
+            padding: 12px 5px;
+            border: 1px solid var(--border-light);
+            border-radius: 6px;
+            text-align: center;
+            font-size: 1.1em;
+            transition: border-color 0.3s, opacity 0.3s;
+            color: var(--text-dark);
+            background-color: var(--white);
+        }
+        
+        .controls input:focus {
+            border-color: var(--primary-blue);
+            outline: none;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25); /* Subtle blue glow */
+        }
+
+        .controls input:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            background-color: var(--light-blue);
+        }
+
+        .buttons button {
+            padding: 12px 25px;
+            margin: 10px 8px;
+            font-size: 1.1em;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s;
+            font-weight: 600;
+            color: var(--white);
+        }
+
+        .buttons button:active {
+            transform: scale(0.98);
+        }
+
+        #startStopBtn {
+            background-color: var(--primary-blue);
+        }
+
+        #startStopBtn:hover {
+            background-color: var(--dark-blue);
+        }
+        
+        /* Pause button style (overrides startStopBtn for pause state) */
+        .buttons button.pause-state {
+            background-color: #ffc107; /* Orange for pause */
+            color: #333;
+        }
+        .buttons button.pause-state:hover {
+            background-color: #e0a800;
+        }
+
+
+        #resetBtn {
+            background-color: var(--text-medium); /* Gray for Reset */
+            color: var(--white);
+        }
+
+        #resetBtn:hover {
+            background-color: #5a6268;
+        }
+
+        .note {
+            margin-top: 30px;
+            font-size: 0.9em;
+            color: var(--text-medium);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Countdown Timer</h1>
+        <div id="display">00:00:00</div>
+        
+        <div class="controls">
+            <div class="input-group">
+                <label for="hours">Hrs</label>
+                <input type="number" id="hours" min="0" placeholder="0" value="0">
+            </div>
+            <div class="input-group">
+                <label for="minutes">Mins</label>
+                <input type="number" id="minutes" min="0" max="59" placeholder="5" value="5">
+            </div>
+            <div class="input-group">
+                <label for="seconds">Secs</label>
+                <input type="number" id="seconds" min="0" max="59" placeholder="0" value="0">
+            </div>
+        </div>
+        <div class="buttons">
+            <button id="startStopBtn">Start</button>
+            <button id="resetBtn">Reset</button>
+        </div>
+        
+        <audio id="alarmSound" src="alarm.mp3" preload="auto"></audio>
+        <p class="note">Set your time (Hrs:Mins:Secs) to begin the countdown.</p>
+    </div>
+
+    <script>
+        // --- JAVASCRIPT LOGIC ---
+        
+        // --- Timer Variables ---
+        const display = document.getElementById('display');
+        const startStopBtn = document.getElementById('startStopBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const inputs = [
+            document.getElementById('hours'),
+            document.getElementById('minutes'),
+            document.getElementById('seconds')
+        ];
+        const alarmSound = document.getElementById('alarmSound');
+
+        let totalSeconds = 0;
+        let timerInterval;
+        let isRunning = false;
+
+        // --- Utility Functions ---
+        function formatTime(sec) {
+            const h = String(Math.floor(sec / 3600)).padStart(2, '0');
+            const m = String(Math.floor((sec % 3600) / 60)).padStart(2, '0');
+            const s = String(sec % 60).padStart(2, '0');
+            return `${h}:${m}:${s}`;
+        }
+
+        function updateDisplay() {
+            display.textContent = formatTime(totalSeconds);
+        }
+
+        function toggleInputs(disabled) {
+            inputs.forEach(input => input.disabled = disabled);
+        }
+
+        // --- Core Timer Logic ---
+        function startTimer() {
+            if (isRunning) return; 
+
+            // Only grab time from inputs if the timer is at 0 (a fresh start)
+            if (totalSeconds <= 0) {
+                const h = parseInt(inputs[0].value) || 0;
+                const m = parseInt(inputs[1].value) || 0;
+                const s = parseInt(inputs[2].value) || 0;
+                totalSeconds = h * 3600 + m * 60 + s;
+            }
+
+            if (totalSeconds <= 0) {
+                alert("Please set a time greater than zero to start the countdown!");
+                return;
+            }
+
+            // UI Changes for Start
+            toggleInputs(true); // Disable inputs while running
+            startStopBtn.textContent = 'Pause';
+            startStopBtn.classList.add('pause-state'); // Add class for pause styling
+            isRunning = true;
+
+            // Start the countdown interval
+            timerInterval = setInterval(() => {
+                if (totalSeconds > 0) {
+                    totalSeconds--;
+                    updateDisplay();
+                } else {
+                    // Timer finished
+                    clearInterval(timerInterval);
+                    isRunning = false;
+                    
+                    // Reset to initial state
+                    startStopBtn.textContent = 'Start';
+                    startStopBtn.classList.remove('pause-state'); // Remove pause styling
+                    toggleInputs(false); // Enable inputs
+                    
+                    // Play alarm
+                    alarmSound.play().catch(e => console.log("Alarm sound playback failed:", e));
+                }
+            }, 1000);
+        }
+
+        function stopTimer() {
+            clearInterval(timerInterval);
+            isRunning = false;
+            startStopBtn.textContent = 'Start';
+            startStopBtn.classList.remove('pause-state'); // Remove pause styling
+        }
+
+        function startStopHandler() {
+            if (isRunning) {
+                stopTimer();
+            } else {
+                startTimer();
+            }
+        }
+
+        function resetTimer() {
+            stopTimer(); // Clear any running interval
+            alarmSound.pause(); // Stop any ringing alarm
+            alarmSound.currentTime = 0; // Rewind the alarm
+            
+            // Reset inputs to default and total seconds to 0
+            inputs[0].value = 0;
+            inputs[1].value = 5; 
+            inputs[2].value = 0;
+            totalSeconds = 0;
+            updateDisplay(); // Shows 00:00:00
+
+            toggleInputs(false); // Ensure inputs are enabled
+        }
+
+        // --- Event Listeners ---
+        startStopBtn.addEventListener('click', startStopHandler);
+        resetBtn.addEventListener('click', resetTimer);
+
+        // --- Initial Setup ---
+        resetTimer(); // Initialize display and inputs
+    </script>
+</body>
+</html>
